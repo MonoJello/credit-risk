@@ -1,5 +1,6 @@
 from .model import (
-    calculate_wald_statistics, 
+    calculate_wald_statistics,
+    calculate_auc_statistics,
     plot_event_num, 
     plot_event_cat, 
     forward_select_auc, 

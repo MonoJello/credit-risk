@@ -41,6 +41,82 @@ def corr_crit(corr_tmp, thresh):
 
     return corr_ind
 
+def calculate_auc_statistics(
+    df,
+    column_names,
+    event_column
+):
+    """
+    Calculate one univariate AUC per input variable.
+
+    Numeric variables are tested directly.
+    Categorical variables are one-hot encoded internally.
+    """
+
+    import numpy as np
+    import pandas as pd
+    import statsmodels.api as sm
+    from sklearn.metrics import roc_auc_score
+
+    required_columns = column_names + [event_column]
+
+    missing_columns = [
+        col for col in required_columns
+        if col not in df.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(
+            f"The following columns are missing: {missing_columns}"
+        )
+
+    auc_results = []
+
+    for column in column_names:
+
+        model_df = df[[column, event_column]].dropna()
+
+        # Convert categorical columns to dummy variables
+        X = pd.get_dummies(
+            model_df[[column]],
+            drop_first=True,
+            dtype=float
+        )
+
+        y = model_df[event_column].astype(float)
+
+        # Skip variables with no variation
+        if X.shape[1] == 0:
+            continue
+
+        X = sm.add_constant(X)
+
+        try:
+            model = sm.Logit(y, X).fit(disp=False)
+
+            probabilities = model.predict(X)
+
+            auc = roc_auc_score(
+                y,
+                probabilities
+            )
+
+            auc_results.append({
+                "var": column,
+                "auc": auc
+            })
+
+        except Exception as error:
+            print(f"Could not fit model for '{column}': {error}")
+
+    aucs = (
+        pd.DataFrame(auc_results)
+        .sort_values(by="auc", ascending=False)
+        .reset_index(drop=True)
+    )
+
+    return aucs
+
 def calculate_wald_statistics(
     df,
     column_names,
