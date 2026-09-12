@@ -1,46 +1,41 @@
-def compare_datasets(train_df, test_df, target_col):
+def compare_datasets(train_df, test_df):
     """
-    Compare training and test datasets.
+    Compare all columns in training and test datasets.
 
-    Numeric variables:
+    Numeric columns:
         - Mean
 
-    Categorical variables:
+    Categorical columns:
         - Percentage of observations in each category
 
     Returns:
-        A DataFrame with:
-        - train
-        - test
-        - percent_difference
+        DataFrame with train, test, and percent_difference columns.
     """
 
     import pandas as pd
     import numpy as np
 
-    train = train_df.drop(columns=[target_col], errors="ignore")
-    test = test_df.drop(columns=[target_col], errors="ignore")
-
     output = {}
 
+    # Include every column from both dataframes
     columns = list(dict.fromkeys(
-        train.columns.tolist() + test.columns.tolist()
+        train_df.columns.tolist() + test_df.columns.tolist()
     ))
 
     for column in columns:
         train_series = (
-            train[column]
-            if column in train.columns
+            train_df[column]
+            if column in train_df.columns
             else pd.Series(dtype="object")
         )
 
         test_series = (
-            test[column]
-            if column in test.columns
+            test_df[column]
+            if column in test_df.columns
             else pd.Series(dtype="object")
         )
 
-        # Numeric variables
+        # Treat the column as numeric if both versions are numeric
         if (
             pd.api.types.is_numeric_dtype(train_series)
             and pd.api.types.is_numeric_dtype(test_series)
@@ -50,8 +45,8 @@ def compare_datasets(train_df, test_df, target_col):
                 "test": test_series.mean()
             }
 
-        # Categorical variables
         else:
+            # Include all categories found in either dataframe
             categories = pd.Index(
                 train_series.dropna().unique().tolist()
                 + test_series.dropna().unique().tolist()
@@ -79,13 +74,18 @@ def compare_datasets(train_df, test_df, target_col):
 
     result = pd.DataFrame.from_dict(output, orient="index")
 
+    # Signed percentage difference relative to training
     result["percent_difference"] = np.where(
         result["train"] != 0,
         ((result["test"] - result["train"]) / result["train"]) * 100,
         np.nan
     )
 
-    result.columns = ["train", "test", "percent_difference"]
+    result.columns = [
+        "train",
+        "test",
+        "percent_difference"
+    ]
 
     return result
 
