@@ -14,3 +14,8 @@ from .results import(
     cumulative_event_rate_plot,
     calibration_plot
 )
+
+
+from .describe import(
+    compare_datasets
+)
